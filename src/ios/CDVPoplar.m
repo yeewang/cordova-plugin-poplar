@@ -24,66 +24,28 @@
 #import <Cordova/CDV.h>
 #import "CDVPoplar.h"
 
-@implementation UIPoplar (ModelVersion)
-
-- (NSString*)modelVersion
-{
-    size_t size;
-
-    sysctlbyname("hw.machine", NULL, &size, NULL, 0);
-    char* machine = malloc(size);
-    sysctlbyname("hw.machine", machine, &size, NULL, 0);
-    NSString* platform = [NSString stringWithUTF8String:machine];
-    free(machine);
-
-    return platform;
-}
-
-@end
-
 @interface CDVPoplar () {}
 @end
 
 @implementation CDVPoplar
 
-- (NSString*)uniqueAppInstanceIdentifier:(UIPoplar*)device
-{
-    NSUserDefaults* userDefaults = [NSUserDefaults standardUserDefaults];
-    static NSString* UUID_KEY = @"CDVUUID";
-    
-    // Check user defaults first to maintain backwards compaitibility with previous versions
-    // which didn't user identifierForVendor
-    NSString* app_uuid = [userDefaults stringForKey:UUID_KEY];
-    if (app_uuid == nil) {
-        app_uuid = [[device identifierForVendor] UUIDString];
-        [userDefaults setObject:app_uuid forKey:UUID_KEY];
-        [userDefaults synchronize];
-    }
-    
-    return app_uuid;
-}
-
 - (void)getPoplarInfo:(CDVInvokedUrlCommand*)command
 {
-    NSDictionary* deviceProperties = [self deviceProperties];
-    CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:deviceProperties];
+    NSDictionary* poplarProperties = [self poplarProperties];
+    CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:poplarProperties];
 
     [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
 
-- (NSDictionary*)deviceProperties
+- (NSDictionary*)poplarProperties
 {
-    UIPoplar* device = [UIPoplar currentPoplar];
-    NSMutableDictionary* devProps = [NSMutableDictionary dictionaryWithCapacity:4];
-
-    [devProps setObject:@"Apple" forKey:@"manufacturer"];
-    [devProps setObject:[device modelVersion] forKey:@"model"];
-    [devProps setObject:@"iOS" forKey:@"platform"];
-    [devProps setObject:[device systemVersion] forKey:@"version"];
-    [devProps setObject:[self uniqueAppInstanceIdentifier:device] forKey:@"uuid"];
-    [devProps setObject:[[self class] cordovaVersion] forKey:@"cordova"];
-    [devProps setObject:@([self isVirtual]) forKey:@"isVirtual"];
-    NSDictionary* devReturn = [NSDictionary dictionaryWithDictionary:devProps];
+    NSMutableDictionary* poplarProps = [NSMutableDictionary dictionaryWithCapacity:4];
+    poplarProps[@"readyState"] = [NSNumber numberWithInt:0];
+    poplarProps[@"responseText"] = @"";
+    poplarProps[@"responseXML"] = @"";
+    poplarProps[@"status"] = @"200";
+    poplarProps[@"statusText"] = @"200";
+    NSDictionary* devReturn = [NSDictionary dictionaryWithDictionary:poplarProps];
     return devReturn;
 }
 
@@ -92,15 +54,60 @@
     return CDV_VERSION;
 }
 
-- (BOOL)isVirtual
+- (void)abort:(CDVInvokedUrlCommand*)command
 {
-    #if TARGET_OS_SIMULATOR
-        return true;
-    #elif TARGET_IPHONE_SIMULATOR
-        return true;
-    #else
-        return false;
-    #endif
+    CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString: @"abort"];
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+}
+
+- (void)getAllResponseHeaders:(CDVInvokedUrlCommand*)command
+{
+    NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:1];
+    NSString * allHeaders = [message description];
+    
+    CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:allHeaders];
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+}
+
+- (void)getResponseHeader:(CDVInvokedUrlCommand*)command
+{
+    NSString* header = [command.arguments objectAtIndex:0];
+    NSDictionary *reponseHeader = nil; //TODO:
+    
+    NSString *message = reponseHeader[header];
+    CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString: message];
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+}
+
+- (void)open:(CDVInvokedUrlCommand*)command
+{
+    NSDictionary* options = [command.arguments objectAtIndex:0];
+    NSString *methodName = options[@"method"];
+    NSString *url = options[@"url"];
+    BOOL async = [options[@"async"] boolValue];
+    NSString *username = options[@"username"];
+    NSString *password = options[@"password"];
+    
+    CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString: @"open"];
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+}
+
+- (void)send:(CDVInvokedUrlCommand*)command
+{
+    NSDictionary* body = [command.arguments objectAtIndex:0];
+    
+    CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString: @"send"];
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+}
+
+- (void)setRequestHeader:(CDVInvokedUrlCommand*)command
+{
+    NSDictionary* options = [command.arguments objectAtIndex:0];
+    NSString *name = options[@"name"];
+    NSString *value = options[@"value"];
+    
+    CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString: @"setRequestHeader"];
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
 
 @end
