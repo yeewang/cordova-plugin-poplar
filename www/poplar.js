@@ -1,29 +1,50 @@
+/*
+*
+* Licensed to the Apache Software Foundation (ASF) under one
+* or more contributor license agreements.  See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership.  The ASF licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License.  You may obtain a copy of the License at
+*
+*   http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing,
+* software distributed under the License is distributed on an
+* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+* KIND, either express or implied.  See the License for the
+* specific language governing permissions and limitations
+* under the License.
+*
+*/
+
 var argscheck = require('cordova/argscheck'),
-    channel = require('cordova/channel'),
-    utils = require('cordova/utils'),
-    exec = require('cordova/exec'),
-    cordova = require('cordova');
+channel = require('cordova/channel'),
+utils = require('cordova/utils'),
+exec = require('cordova/exec'),
+cordova = require('cordova');
 
 channel.createSticky('onCordovaInfoReady');
 // Tell cordova channel to wait on the CordovaInfoReady event
 channel.waitForInitialization('onCordovaInfoReady');
 
 /**
- * @constructor
- */
+* @constructor
+*/
 function Poplar() {
     /*
-     State
-     0 Uninitialized
-     This is the initial state. The XMLHttpRequest object has just been created or has been reset with the abort( ) method.
-     1 Open
-     The open( ) method has been called, but send( ) has not. The request has not yet been sent
-     2 Sent The send( ) method has been called, and the HTTP request has been transmitted to the web server. No response has been received yet.
-     3 Receiving
-     All response headers have been received. The response body is being received but is not complete.
-     4Loaded
-     The HTTP response has been fully received.
-     */
+    State
+    0 Uninitialized
+    This is the initial state. The XMLHttpRequest object has just been created or has been reset with the abort( ) method.
+    1 Open
+    The open( ) method has been called, but send( ) has not. The request has not yet been sent
+    2 Sent The send( ) method has been called, and the HTTP request has been transmitted to the web server. No response has been received yet.
+    3 Receiving
+    All response headers have been received. The response body is being received but is not complete.
+    4Loaded
+    The HTTP response has been fully received.
+    */
     this.available = false;
     this.readyState = 0;
     this.responseText = null;
@@ -53,43 +74,43 @@ function Poplar() {
                
     /*
     abort: void function() {
-        Cordova.exec(null, null, "MyPlugin", "abort");
+    Cordova.exec(null, null, "MyPlugin", "abort");
     },
 
     getAllResponseHeaders: String function() {
-        Cordova.exec(null, null, "MyPlugin", "getAllResponseHeaders");
-        return "";
+    Cordova.exec(null, null, "MyPlugin", "getAllResponseHeaders");
+    return "";
     },
         
     getResponseHeader: String function(String header) {
-        Cordova.exec(null, null, "MyPlugin", "getResponseHeader", header);
-        return "";
+    Cordova.exec(null, null, "MyPlugin", "getResponseHeader", header);
+    return "";
     },
 
     open: void function(String method,
-                        String url,
-                        boolean async,
-                        String username,
-                        String password) {
-        Cordova.exec(null, null, "MyPlugin", "open", method, url, async, username, password);
+    String url,
+    boolean async,
+    String username,
+    String password) {
+    Cordova.exec(null, null, "MyPlugin", "open", method, url, async, username, password);
     },
 
     send: void function(Object body) {
-        Cordova.exec(null, null, "MyPlugin", "send", body);
+    Cordova.exec(null, null, "MyPlugin", "send", body);
     },
         
     setRequestHeader: void function(String name, String value) {
-        Cordova.exec(null, null, "MyPlugin", "setRequestHeader", name, value);
+    Cordova.exec(null, null, "MyPlugin", "setRequestHeader", name, value);
     },
     
     // event
     function onreadystatechange;
-};
+    };
 
-function createXHR() {
+    function createXHR() {
     return new XHR();
-};
-*/
+    };
+    */
 }
 
 Poplar.prototype.getInfo = function(successCallback, errorCallback) {
@@ -160,5 +181,3 @@ Poplar.prototype.setRequestHeader = function(successCallback, errorCallback, nam
 };
 
 module.exports = new Poplar();
-
-});
