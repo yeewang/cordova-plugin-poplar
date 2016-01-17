@@ -36,6 +36,8 @@ var app = {
     onDeviceReady: function() {
         app.receivedEvent('deviceready');
 
+        var poplar = new Poplar();
+        
         var success = function(message) {
             document.write("<font size=5>Result:</font>" + message + "<br>");
         }
@@ -44,6 +46,8 @@ var app = {
             alert("Error calling Poplar Plugin");
         }
         
+        window.poplar = poplar;
+
         poplar.onreadystatechange = function() {
             var message = "<font size=5>onreadystatechange</font><br>";
             message = message.concat(
@@ -56,7 +60,8 @@ var app = {
             document.write(message);
 
             if (poplar.readyState === 4) {
-                poplar.open(success, failure, 'GET', 'http://192.168.1.200:800/test_deferred_return.call?delay=30', true);
+                document.write("<font size=5>Send next request</font><br>");
+                poplar.open(success, failure, 'GET', 'http://192.168.1.200:800/test_deferred_return.call?delay=10', true);
                 poplar.send(success, failure);
             }
         };
@@ -71,13 +76,14 @@ var app = {
         poplar.getResponseHeader(
             function(responseHeaders) {
             },
-            failure);
+            failure,
+            'header');
 
         // String method;
         // String url;
         // boolean async;
         // String username; String password;
-        poplar.open(success, failure, 'GET', 'http://192.168.1.200:800/test_deferred_return.call?delay=10', true);
+        poplar.open(success, failure, 'GET', 'http://192.168.1.200:800/test_deferred_return.call?delay=30', true);
         //poplar.open(success, failure, 'GET', 'http://192.168.1.200:800/test_close.call', true);
         //poplar.open(success, failure, 'GET', 'http://www.163.com/', true);
         poplar.setRequestHeader(success, failure, "x-allow", "demo-xml");

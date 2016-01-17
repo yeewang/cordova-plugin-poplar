@@ -20,19 +20,15 @@
 */
 
 var argscheck = require('cordova/argscheck'),
-channel = require('cordova/channel'),
 utils = require('cordova/utils'),
 exec = require('cordova/exec'),
 cordova = require('cordova');
 
-channel.createSticky('onCordovaInfoReady');
-// Tell cordova channel to wait on the CordovaInfoReady event
-channel.waitForInitialization('onCordovaInfoReady');
-
 /**
 * @constructor
 */
-function Poplar() {
+
+Poplar = function() {
     this.available = false;
     this.onreadystatechange = null;    
     this.readyState = 0;
@@ -40,27 +36,24 @@ function Poplar() {
     this.responseXML = null;
     this.status = 0;
     this.statusText = null;
-
+    
     var me = this;
-
-    channel.onCordovaReady.subscribe(function() {
+    exec(function(){
         me.getInfo(function(info) {
-            //ignoring info.cordova returning from native, we should use value from cordova.version defined in cordova.js
-            //TODO: CB-5105 native implementations should not return info.cordova
+            var originState = me.readyState;
             var buildLabel = cordova.version;
-            me.available = true;            
+            me.available = true;
             me.readyState = info.readyState;
             me.responseText = info.responseText;
             me.responseXML = info.responseXML;
             me.status = info.status;
             me.statusText = info.statusText;
-            channel.onCordovaInfoReady.fire();
         },function(e) {
             me.available = false;
-            utils.alert("[ERROR] Error initializing Cordova: " + e);
+            utils.alert("[ERROR] Error in executing getInfo: " + e);
         });
-    });
-}
+    }, function() { alert("Poplar plugin failed to initialize."); }, "Poplar", "init");
+};
 
 Poplar.prototype.getInfo = function(successCallback, errorCallback) {
     if (!errorCallback) { errorCallback = function() {}; }
@@ -230,4 +223,4 @@ Poplar.prototype.setTimeout = function(successCallback, errorCallback, timeout) 
     exec(successCallback, errorCallback, "Poplar", "setTimeout", [timeout]);
 };
 
-module.exports = new Poplar();
+module.exports = Poplar();
