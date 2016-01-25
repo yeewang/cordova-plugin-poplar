@@ -54,22 +54,15 @@ static NSString* const kAPPBackgroundEventWillEnterForeground = @"willEnterForeg
 {
     NSNotificationCenter* listener = [NSNotificationCenter defaultCenter];
     
-    if (&UIApplicationDidEnterBackgroundNotification && &UIApplicationWillEnterForegroundNotification) {
-        
-        [listener addObserver:self
-                     selector:@selector(applicationDidEnterBackground:)
-                         name:UIApplicationDidEnterBackgroundNotification
-                       object:nil];
-        
-        [listener addObserver:self
-                     selector:@selector(applicationWillEnterForeground:)
-                         name:UIApplicationWillEnterForegroundNotification
-                       object:nil];
-    }
-    else {
-        
-        //Do something else
-    }
+    [listener addObserver:self
+                 selector:@selector(applicationDidEnterBackground:)
+                     name:UIApplicationDidEnterBackgroundNotification
+                   object:nil];
+    
+    [listener addObserver:self
+                 selector:@selector(applicationWillEnterForeground:)
+                     name:UIApplicationWillEnterForegroundNotification
+                   object:nil];
 }
 
 - (void)applicationDidEnterBackground:(NSNotification*)notification
@@ -141,6 +134,17 @@ static NSString* const kAPPBackgroundEventWillEnterForeground = @"willEnterForeg
     return CDV_VERSION;
 }
 
+- (void)runNetworkConnection {
+    CFWriteStreamRef writeStream;
+    //create a dummy socket
+    CFStreamCreatePairWithSocketToHost(NULL, (CFStringRef)@"192.168.0.200", 15000, nil, &writeStream);
+    CFWriteStreamOpen (writeStream);
+    const char* buff="hello";
+    //try to write on this socket
+    CFWriteStreamWrite (writeStream,(const UInt8*)buff,strlen(buff));
+    CFWriteStreamClose (writeStream);
+}
+
 - (void)init:(CDVInvokedUrlCommand*)command
 {
     CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:@"init"];
@@ -157,7 +161,7 @@ static NSString* const kAPPBackgroundEventWillEnterForeground = @"willEnterForeg
 - (void)getAllResponseHeaders:(CDVInvokedUrlCommand*)command
 {
     NSString* allHeaders = [_voipConnection getAllResponseHeaders];
-    ;
+
     CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:allHeaders];
     [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
@@ -229,20 +233,20 @@ static NSString* const kAPPBackgroundEventWillEnterForeground = @"willEnterForeg
     for (NSUInteger i = 0; i < [js length]; i++) {
         unichar c = [js characterAtIndex:i];
         switch (c) {
-        case '"':
-            [text appendString:@"\\\""];
-            break;
-        case '\r':
-            [text appendString:@"\\r"];
-            break;
-        case '\n':
-            [text appendString:@"\\n"];
-            break;
-        case '\\':
-            [text appendString:@"\\\\"];
-            break;
-        default:
-            [text appendFormat:@"%c", c];
+            case '"':
+                [text appendString:@"\\\""];
+                break;
+            case '\r':
+                [text appendString:@"\\r"];
+                break;
+            case '\n':
+                [text appendString:@"\\n"];
+                break;
+            case '\\':
+                [text appendString:@"\\\\"];
+                break;
+            default:
+                [text appendFormat:@"%c", c];
         }
     }
     [text appendString:@"\""];
@@ -263,17 +267,6 @@ static NSString* const kAPPBackgroundEventWillEnterForeground = @"willEnterForeg
                     [self escapeJsString:info[@"statusText"]]];
     
     [self.commandDelegate evalJs:js];
-    /*
-    if (_voipConnection.readyState == 4) {
-        UILocalNotification* notification = [[UILocalNotification alloc] init];
-        [notification setUserInfo:@{ @"Poplar" : @"Notification" }];
-        notification.fireDate = [NSDate date];
-        notification.alertBody = _voipConnection.responseText;
-        notification.timeZone = [NSTimeZone defaultTimeZone];
-        notification.soundName = UILocalNotificationDefaultSoundName;
-        [[UIApplication sharedApplication] scheduleLocalNotification:notification];
-    }
-     */
 }
 
 @end
