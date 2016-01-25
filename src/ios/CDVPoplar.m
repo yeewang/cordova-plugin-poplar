@@ -20,11 +20,17 @@
 #import "CDVPoplar.h"
 #import "VoipConnection.h"
 #import "VoipConnectionDelegate.h"
+#import "Reachability.h"
 #import <Cordova/CDV.h>
 
 @interface CDVPoplar () {
 }
 @property (nonatomic, strong) VoipConnection* voipConnection;
+
+@property (nonatomic) Reachability *hostReachability;
+@property (nonatomic) Reachability *internetReachability;
+@property (nonatomic) Reachability *wifiReachability;
+
 @end
 
 @implementation CDVPoplar
@@ -41,7 +47,7 @@ static NSString* const kAPPBackgroundEventWillEnterForeground = @"willEnterForeg
  * Initialize the plugin.
  */
 - (void)pluginInitialize
-{
+{    
     self.voipConnection = [VoipConnection connection];
     self.voipConnection.delegate = self;
     [self observeLifeCycle];
@@ -54,26 +60,37 @@ static NSString* const kAPPBackgroundEventWillEnterForeground = @"willEnterForeg
 {
     NSNotificationCenter* listener = [NSNotificationCenter defaultCenter];
     
-    if (&UIApplicationDidEnterBackgroundNotification && &UIApplicationWillEnterForegroundNotification) {
-        
-        [listener addObserver:self
-                     selector:@selector(applicationDidEnterBackground:)
-                         name:UIApplicationDidEnterBackgroundNotification
-                       object:nil];
-        
-        [listener addObserver:self
-                     selector:@selector(applicationWillEnterForeground:)
-                         name:UIApplicationWillEnterForegroundNotification
-                       object:nil];
-    }
-    else {
-        
-        //Do something else
-    }
+    [listener addObserver:self
+                 selector:@selector(applicationDidEnterBackground:)
+                     name:UIApplicationDidEnterBackgroundNotification
+                   object:nil];
+    
+    [listener addObserver:self
+                 selector:@selector(applicationWillEnterForeground:)
+                     name:UIApplicationWillEnterForegroundNotification
+                   object:nil];
+    
+    [listener addObserver:self
+                 selector:@selector(reachabilityChanged:)
+                     name:kReachabilityChangedNotification
+                   object:nil];
+    
+    // Disable hostReachability
+    self.hostReachability = [Reachability reachabilityWithHostName:@"www.apple.com"];
+    [self.hostReachability startNotifier];
+    
+    self.internetReachability = [Reachability reachabilityForInternetConnection];
+    [self.internetReachability startNotifier];
+    
+    self.wifiReachability = [Reachability reachabilityForLocalWiFi];
+    [self.wifiReachability startNotifier];
 }
 
 - (void)applicationDidEnterBackground:(NSNotification*)notification
 {
+    /* Setting up a dummy TCP connection to reset standard BSD socket layer. */
+    [NSThread detachNewThreadSelector:@selector(runNetworkConnection) toTarget:self withObject:nil];
+    
     // setKeepAliveTimeout has been deprecated in iOS9
     BOOL backgroundAccepted = [[UIApplication sharedApplication] setKeepAliveTimeout:600 handler:^{
         [self backgroundHandler];
@@ -89,11 +106,56 @@ static NSString* const kAPPBackgroundEventWillEnterForeground = @"willEnterForeg
 
 - (void)applicationWillEnterForeground:(NSNotification*)notification
 {
+    /* Setting up a dummy TCP connection to reset standard BSD socket layer. */
+    [NSThread detachNewThreadSelector:@selector(runNetworkConnection) toTarget:self withObject:nil];
+
     [[UIApplication sharedApplication] clearKeepAliveTimeout];
     
     [self fireEvent:kAPPBackgroundEventWillEnterForeground withParams:NULL];
     
     NSLog(@"App will enter foreground");
+}
+
+- (void)reachabilityChanged:(NSNotification*)note
+{
+    Reachability* curReach = [note object];
+    NSParameterAssert([curReach isKindOfClass:[Reachability class]]);
+    
+    if (curReach == self.hostReachability) {
+        // NetworkStatus netStatus = [curReach currentReachabilityStatus];
+        BOOL connectionRequired = [curReach connectionRequired];
+        
+        if (connectionRequired) {
+            NSLog(@"Cellular data network is available.\nInternet traffic will be routed through it after a connection is established.");
+        }
+        else {
+            NSLog(@"Cellular data network is active.\nInternet traffic will be routed through it.");
+        }
+    }
+
+    if (curReach == self.internetReachability || curReach == self.wifiReachability) {
+        NetworkStatus netStatus = [curReach currentReachabilityStatus];
+        BOOL connectionRequired = [curReach connectionRequired];
+
+        switch (netStatus) {
+            case NotReachable: {
+                connectionRequired = NO;
+                break;
+            }
+                
+            case ReachableViaWWAN: {
+                break;
+            }
+            case ReachableViaWiFi: {
+                break;
+            }
+        }
+        
+        if (connectionRequired) {
+            // reset VoIP
+            [self onReadyStateChange:[_voipConnection encapsulate]];
+        }
+    }
 }
 
 // The setKeepAliveTimeout has been deprecated in iOS9, so this function could not be invoked in iOS9.
@@ -141,6 +203,17 @@ static NSString* const kAPPBackgroundEventWillEnterForeground = @"willEnterForeg
     return CDV_VERSION;
 }
 
+- (void)runNetworkConnection {
+    CFWriteStreamRef writeStream;
+    //create a dummy socket
+    CFStreamCreatePairWithSocketToHost(NULL, (CFStringRef)@"192.168.0.200", 15000, nil, &writeStream);
+    CFWriteStreamOpen (writeStream);
+    const char* buff="hello";
+    //try to write on this socket
+    CFWriteStreamWrite (writeStream,(const UInt8*)buff,strlen(buff));
+    CFWriteStreamClose (writeStream);
+}
+
 - (void)init:(CDVInvokedUrlCommand*)command
 {
     CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:@"init"];
@@ -157,7 +230,7 @@ static NSString* const kAPPBackgroundEventWillEnterForeground = @"willEnterForeg
 - (void)getAllResponseHeaders:(CDVInvokedUrlCommand*)command
 {
     NSString* allHeaders = [_voipConnection getAllResponseHeaders];
-    ;
+
     CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:allHeaders];
     [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
@@ -222,27 +295,27 @@ static NSString* const kAPPBackgroundEventWillEnterForeground = @"willEnterForeg
 {
     if ([js isKindOfClass:[NSNull class]])
         js = @"";
-
+    
     NSUInteger length = [js length];
     NSMutableString* text = [[NSMutableString alloc] initWithCapacity:(length + (length >> 3))];
     [text appendString:@"\""];
     for (NSUInteger i = 0; i < [js length]; i++) {
         unichar c = [js characterAtIndex:i];
         switch (c) {
-        case '"':
-            [text appendString:@"\\\""];
-            break;
-        case '\r':
-            [text appendString:@"\\r"];
-            break;
-        case '\n':
-            [text appendString:@"\\n"];
-            break;
-        case '\\':
-            [text appendString:@"\\\\"];
-            break;
-        default:
-            [text appendFormat:@"%c", c];
+            case '"':
+                [text appendString:@"\\\""];
+                break;
+            case '\r':
+                [text appendString:@"\\r"];
+                break;
+            case '\n':
+                [text appendString:@"\\n"];
+                break;
+            case '\\':
+                [text appendString:@"\\\\"];
+                break;
+            default:
+                [text appendFormat:@"%c", c];
         }
     }
     [text appendString:@"\""];
@@ -263,17 +336,6 @@ static NSString* const kAPPBackgroundEventWillEnterForeground = @"willEnterForeg
                     [self escapeJsString:info[@"statusText"]]];
     
     [self.commandDelegate evalJs:js];
-    /*
-    if (_voipConnection.readyState == 4) {
-        UILocalNotification* notification = [[UILocalNotification alloc] init];
-        [notification setUserInfo:@{ @"Poplar" : @"Notification" }];
-        notification.fireDate = [NSDate date];
-        notification.alertBody = _voipConnection.responseText;
-        notification.timeZone = [NSTimeZone defaultTimeZone];
-        notification.soundName = UILocalNotificationDefaultSoundName;
-        [[UIApplication sharedApplication] scheduleLocalNotification:notification];
-    }
-     */
 }
 
 @end

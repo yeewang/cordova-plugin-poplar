@@ -6,6 +6,7 @@
 //
 //
 
+#import <CoreLocation/CoreLocation.h>
 #import "VoipConnection.h"
 
 @interface VoipConnection ()
@@ -16,6 +17,8 @@
 @property (nonatomic, strong) NSMutableURLRequest* request;
 @property (nonatomic, strong) NSURLSession* session;
 @property (nonatomic, strong) NSURLSessionDataTask* dataTask;
+
+@property (nonatomic, strong) CLLocationManager* locationManager;
 
 @end
 
@@ -37,6 +40,14 @@
 {
     self = [super init];
     if (self != nil) {
+        self.locationManager = [[CLLocationManager alloc] init];
+        [self.locationManager requestAlwaysAuthorization];
+        self.locationManager.pausesLocationUpdatesAutomatically = NO;
+        self.locationManager.allowsBackgroundLocationUpdates = YES;
+        
+        self.locationManager.distanceFilter = 100000;
+        self.locationManager.desiredAccuracy = 100000; // kCLLocationAccuracyNearestTenMeters;
+
         [self resetDefault];
     }
     return self;
@@ -121,6 +132,9 @@
                                             self.responseText = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
                                             self.responseXML = nil;
                                             self.status = [(NSHTTPURLResponse*)response statusCode];
+                                            
+                                            [self.locationManager stopUpdatingLocation];
+                                            
                                             if (self.status == 200) {
                                                 self.statusText = @"OK";
                                             }
@@ -132,8 +146,10 @@
                                                     self.status = -1;
                                                     self.statusText = @"Timeout";
                                                 }
-                                                else
+                                                else {
                                                     self.statusText = @"Unknown";
+                                                    [self.locationManager startUpdatingLocation];
+                                                }
                                             }
                                             
                                             [self.delegate onReadyStateChange:[self encapsulate]];
