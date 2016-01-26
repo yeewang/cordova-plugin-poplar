@@ -25,6 +25,7 @@
 @interface CDVPoplar () {
 }
 @property (nonatomic, strong) VoipConnection* voipConnection;
+@property (nonatomic, assign) UIBackgroundTaskIdentifier bgTask;
 @end
 
 @implementation CDVPoplar
@@ -77,6 +78,20 @@ static NSString* const kAPPBackgroundEventWillEnterForeground = @"willEnterForeg
     }
     else {
         NSLog(@"VOIP backgrounding NOT accepted for the App");
+    }
+    
+    if ([_voipConnection needLocationUpdate]) {        
+        UIApplication* app = [UIApplication sharedApplication];
+        
+        _bgTask = [app beginBackgroundTaskWithExpirationHandler:^{
+            [app endBackgroundTask:_bgTask];
+            _bgTask = UIBackgroundTaskInvalid;
+        }];
+        
+        [_voipConnection startUpdatingLocation];
+    }
+    else {
+        [_voipConnection stopUpdatingLocation];
     }
 }
 
@@ -132,17 +147,6 @@ static NSString* const kAPPBackgroundEventWillEnterForeground = @"willEnterForeg
 + (NSString*)cordovaVersion
 {
     return CDV_VERSION;
-}
-
-- (void)runNetworkConnection {
-    CFWriteStreamRef writeStream;
-    //create a dummy socket
-    CFStreamCreatePairWithSocketToHost(NULL, (CFStringRef)@"192.168.0.200", 15000, nil, &writeStream);
-    CFWriteStreamOpen (writeStream);
-    const char* buff="hello";
-    //try to write on this socket
-    CFWriteStreamWrite (writeStream,(const UInt8*)buff,strlen(buff));
-    CFWriteStreamClose (writeStream);
 }
 
 - (void)init:(CDVInvokedUrlCommand*)command
