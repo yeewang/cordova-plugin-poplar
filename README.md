@@ -5,16 +5,16 @@ Cordova-plugin-poplar provides the XMLHttpRequest like API for easy to use.
 
 # Getting started
 ### Checkout cordova-plugin-poplar source code to your local folder
-> $git@github.com:yeewang/cordova-plugin-poplar.git cordova-plugin-poplar
+> git clone https://github.com/yeewang/cordova-plugin-poplar.git cordova-plugin-poplar
 
 ### Install cordova-plugin-poplar plugin to your cordova project.
-> $plugman install --platform ios --project $MY_CORDOVA_PRROJECT/platforms/ios/ --plugin cordova-plugin-poplar
+> plugman install --platform ios --project $MY_CORDOVA_PRROJECT/platforms/ios/ --plugin cordova-plugin-poplar
 
 ### Modify the project root html file to insert the following line:
     <script type="text/javascript" src="poplar.js"></script>
 
 ## Rebuild your cordova project.
-> $cordova build
+> cordova build
 
 # APIs
 ###Properties:
